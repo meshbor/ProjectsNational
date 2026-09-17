@@ -4,6 +4,7 @@ import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
   NATIONAL_PROJECTS,
+  nationalProjectById,
   projectHasReadyWork,
 } from "./data";
 import {
@@ -62,4 +63,19 @@ test("other national projects open a draft workspace without invented contractor
   );
   assert.equal(namedContractors.length, 0);
   assert.ok(workspaceFor("youth"));
+  const youthByFederal = workspaceFor("youth", "Мы вместе");
+  assert.ok(youthByFederal);
+  assert.equal(youthByFederal.title, "Молодёжь и дети");
+  assert.equal(workspaceFor("missing-project"), null);
+});
+
+test("family keeps the detailed canvas; other NPs use a catalog draft", () => {
+  const family = nationalProjectById("family");
+  const youth = nationalProjectById("youth");
+  assert.ok(family && youth);
+  assert.equal(workspaceForNationalProject(family), LARGE_FAMILY_WORKSPACE);
+  const draft = workspaceForNationalProject(youth);
+  assert.equal(draft.summary, youth.goal);
+  assert.deepEqual(draft.knownMeasures, youth.highlights);
+  assert.equal(draft.companies.slots[0]?.name, youth.agency);
 });

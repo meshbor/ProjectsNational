@@ -1,7 +1,15 @@
 "use client";
 
-import { useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { DigestToolbar } from "@/components/digest-toolbar";
+import { usePhoneLayout } from "@/components/mobile-sheet";
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
@@ -30,29 +38,35 @@ export function NationalProjectsApp() {
   const [selectedNpId, setSelectedNpId] = useState(ACTIVE_NATIONAL_PROJECT_ID);
   const [railWidth, setRailWidth] = useState(RAIL_DEFAULT);
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [resizing, setResizing] = useState(false);
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
+  const isPhone = usePhoneLayout();
 
   const ranked = useMemo(() => projectsByBudgetDesc(NATIONAL_PROJECTS), []);
   const selectedProject =
     nationalProjectById(selectedNpId) ?? ranked[0] ?? NATIONAL_PROJECTS[0];
   const workspace = workspaceForNationalProject(selectedProject);
   const columnWidth = railCollapsed ? RAIL_COLLAPSED : railWidth;
+  const isFamily = selectedProject.id === ACTIVE_NATIONAL_PROJECT_ID;
 
   function openProject(project: NationalProject) {
     setSelectedNpId(project.id);
   }
 
   function onResizerPointerDown(event: PointerEvent<HTMLButtonElement>) {
+    if (isPhone) return;
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = {
       startX: event.clientX,
       startWidth: railCollapsed ? RAIL_DEFAULT : railWidth,
     };
+    setResizing(true);
     if (railCollapsed) setRailCollapsed(false);
   }
 
   function onResizerPointerMove(event: PointerEvent<HTMLButtonElement>) {
-    if (!drag.current) return;
+    if (!drag.current || isPhone) return;
     const next = drag.current.startWidth + (event.clientX - drag.current.startX);
     if (next < 120) {
       setRailCollapsed(true);
@@ -62,8 +76,36 @@ export function NationalProjectsApp() {
     setRailWidth(Math.min(RAIL_MAX, Math.max(RAIL_MIN, next)));
   }
 
-  function onResizerPointerUp() {
+  function onResizerPointerUp(event: PointerEvent<HTMLButtonElement>) {
     drag.current = null;
+    setResizing(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function onResizerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (isPhone) return;
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setRailCollapsed(false);
+      setRailWidth((value) => Math.max(RAIL_MIN, (railCollapsed ? RAIL_DEFAULT : value) - 16));
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setRailCollapsed(false);
+      setRailWidth((value) => Math.min(RAIL_MAX, (railCollapsed ? RAIL_DEFAULT : value) + 16));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setRailCollapsed(false);
+      setRailWidth(RAIL_MIN);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setRailCollapsed(false);
+      setRailWidth(RAIL_MAX);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setRailCollapsed((value) => !value);
+    }
   }
 
   return (
@@ -76,14 +118,20 @@ export function NationalProjectsApp() {
       <div className="section-shell">
         <DigestToolbar
           description={
-            selectedProject.id === ACTIVE_NATIONAL_PROJECT_ID
-              ? "Сейчас разбираем ФП «Многодетная семья». Остальные — в работе."
-              : `Канва НП «${selectedProject.title}». Подрядчиков не выдумываем.`
+            isFamily
+              ? "Сейчас разбираем ФП «Многодетная семья» в нацпроекте «Семья»."
+              : `Черновик НП «${selectedProject.title}». Подрядчиков не выдумываем.`
           }
         />
 
         <div
-          className="workspace workspace-projects"
+          className={[
+            "workspace workspace-projects",
+            railCollapsed ? "is-rail-collapsed" : "",
+            resizing ? "is-resizing" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
           style={{ "--projects-rail-width": `${columnWidth}px` } as CSSProperties}
         >
           <aside
@@ -96,15 +144,20 @@ export function NationalProjectsApp() {
                 type="button"
                 className="rail-toggle"
                 aria-expanded={!railCollapsed}
+                aria-controls="projects-rail-list"
+                title={railCollapsed ? "Развернуть список нацпроектов" : "Сжать список нацпроектов"}
                 onClick={() => setRailCollapsed((value) => !value)}
               >
-                {railCollapsed ? "Развернуть" : "Сжать"}
+                <span className="visually-hidden">
+                  {railCollapsed ? "Развернуть список нацпроектов" : "Сжать список нацпроектов"}
+                </span>
+                <span aria-hidden="true">{railCollapsed ? "›" : "‹"}</span>
               </button>
             </header>
             {railCollapsed ? (
               <p className="projects-rail-strip">по бюджету</p>
             ) : (
-              <div className="projects-rail-list">
+              <div id="projects-rail-list" className="projects-rail-list">
                 <p className="queue-lead">По убыванию бюджета, 2025–2030.</p>
                 {ranked.map((project) => {
                   const budget = budgetFor(project.id);
@@ -115,7 +168,7 @@ export function NationalProjectsApp() {
                       type="button"
                       className={active ? "rail-project is-active" : "rail-project"}
                       onClick={() => openProject(project)}
-                      aria-current={active ? "page" : undefined}
+                      aria-current={active ? "true" : undefined}
                     >
                       <span className="rail-project-top">
                         {project.id === ACTIVE_NATIONAL_PROJECT_ID ? (
@@ -139,16 +192,22 @@ export function NationalProjectsApp() {
             type="button"
             className="rail-resizer"
             aria-label="Ширина колонки нацпроектов"
+            aria-orientation="vertical"
+            aria-valuemin={RAIL_MIN}
+            aria-valuemax={RAIL_MAX}
+            aria-valuenow={Math.round(columnWidth)}
+            tabIndex={isPhone ? -1 : 0}
             onPointerDown={onResizerPointerDown}
             onPointerMove={onResizerPointerMove}
             onPointerUp={onResizerPointerUp}
             onPointerCancel={onResizerPointerUp}
+            onKeyDown={onResizerKeyDown}
           />
 
           <main className="chat-panel">
             <div className="thread">
               <ActiveWorkspace workspace={workspace} />
-              {selectedProject.id === ACTIVE_NATIONAL_PROJECT_ID ? (
+              {isFamily ? (
                 <QueueBlock
                   title="Остальные федеральные проекты «Семья»"
                   items={
@@ -190,7 +249,7 @@ function ActiveWorkspace({ workspace }: { workspace: FederalWorkspace }) {
   const isFederal = workspace.id === LARGE_FAMILY_WORKSPACE.id;
   return (
     <section className="selected-card workspace-home">
-      <p className="bubble-kicker">Рабочее место</p>
+      <p className="bubble-kicker">{isFederal ? "Рабочее место" : "Черновик рабочего места"}</p>
       <p className="fp-crumb">
         {isFederal
           ? `НП «${project?.title}» → ФП «${workspace.title}»`
