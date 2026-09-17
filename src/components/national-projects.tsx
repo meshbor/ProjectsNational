@@ -13,44 +13,94 @@ import { usePhoneLayout } from "@/components/mobile-sheet";
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
-  NATIONAL_PROJECTS,
+  PROJECT_GROUPS,
   PROJECT_SOURCES,
   RELATED_PROGRAMS,
+  federalProjectById,
   nationalProjectById,
   type FederalProject,
   type NationalProject,
+  type ProjectGroupId,
 } from "@/lib/projects/data";
-import { budgetFor, formatBillionRub, projectsByBudgetDesc } from "@/lib/projects/budget";
+import { budgetFor, formatBillionRub } from "@/lib/projects/budget";
+import { projectTree } from "@/lib/projects/tree";
 import {
   LARGE_FAMILY_WORKSPACE,
+  workspaceFor,
   workspaceForNationalProject,
   type CompanySlot,
   type FederalWorkspace,
   type WorkspaceTask,
 } from "@/lib/projects/workspace";
 
-const RAIL_DEFAULT = 280;
-const RAIL_MIN = 168;
-const RAIL_MAX = 440;
+const RAIL_DEFAULT = 320;
+const RAIL_MIN = 200;
+const RAIL_MAX = 480;
 const RAIL_COLLAPSED = 48;
 
 export function NationalProjectsApp() {
   const [selectedNpId, setSelectedNpId] = useState(ACTIVE_NATIONAL_PROJECT_ID);
+  const [selectedFpId, setSelectedFpId] = useState(ACTIVE_FEDERAL_PROJECT_ID);
+  const [expandedGroups, setExpandedGroups] = useState<Set<ProjectGroupId>>(
+    () => new Set(PROJECT_GROUPS.map((group) => group.id)),
+  );
+  const [expandedNps, setExpandedNps] = useState<Set<string>>(
+    () => new Set([ACTIVE_NATIONAL_PROJECT_ID]),
+  );
   const [railWidth, setRailWidth] = useState(RAIL_DEFAULT);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [resizing, setResizing] = useState(false);
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
   const isPhone = usePhoneLayout();
 
-  const ranked = useMemo(() => projectsByBudgetDesc(NATIONAL_PROJECTS), []);
+  const tree = useMemo(() => projectTree(), []);
   const selectedProject =
-    nationalProjectById(selectedNpId) ?? ranked[0] ?? NATIONAL_PROJECTS[0];
-  const workspace = workspaceForNationalProject(selectedProject);
+    nationalProjectById(selectedNpId) ?? tree[0]?.projects[0];
+  const selectedFp = selectedProject
+    ? federalProjectById(selectedProject, selectedFpId) ??
+      selectedProject.federalProjects.find((item) => item.status === "ready") ??
+      selectedProject.federalProjects[0]
+    : undefined;
+  const workspace = selectedProject
+    ? workspaceFor(selectedProject.id, selectedFp?.id) ??
+      workspaceForNationalProject(selectedProject)
+    : LARGE_FAMILY_WORKSPACE;
   const columnWidth = railCollapsed ? RAIL_COLLAPSED : railWidth;
-  const isFamily = selectedProject.id === ACTIVE_NATIONAL_PROJECT_ID;
+  const isFamilyCanvas = workspace.id === LARGE_FAMILY_WORKSPACE.id;
 
-  function openProject(project: NationalProject) {
+  function openNational(project: NationalProject) {
+    const nextFp =
+      project.federalProjects.find((item) => item.status === "ready") ??
+      project.federalProjects[0];
     setSelectedNpId(project.id);
+    setSelectedFpId(nextFp.id);
+    setExpandedGroups((current) => new Set(current).add(project.group));
+    setExpandedNps((current) => new Set(current).add(project.id));
+  }
+
+  function openFederal(project: NationalProject, federal: FederalProject) {
+    setSelectedNpId(project.id);
+    setSelectedFpId(federal.id);
+    setExpandedGroups((current) => new Set(current).add(project.group));
+    setExpandedNps((current) => new Set(current).add(project.id));
+  }
+
+  function toggleGroup(id: ProjectGroupId) {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleNational(id: string) {
+    setExpandedNps((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function onResizerPointerDown(event: PointerEvent<HTMLButtonElement>) {
@@ -112,15 +162,15 @@ export function NationalProjectsApp() {
     <div className="app-shell">
       <nav className="site-tabs" aria-label="Рабочее место">
         <strong className="site-brand">нацпроекты</strong>
-        <p className="site-brand-note">каталог слева · канва в центре</p>
+        <p className="site-brand-note">дерево слева · канва в центре</p>
       </nav>
 
       <div className="section-shell">
         <DigestToolbar
           description={
-            isFamily
+            isFamilyCanvas
               ? "Сейчас разбираем ФП «Многодетная семья» в нацпроекте «Семья»."
-              : `Черновик НП «${selectedProject.title}». Подрядчиков не выдумываем.`
+              : `Черновик НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
           }
         />
 
@@ -136,54 +186,126 @@ export function NationalProjectsApp() {
         >
           <aside
             className={railCollapsed ? "projects-rail is-collapsed" : "projects-rail"}
-            aria-label="Нацпроекты"
+            aria-label="Дерево нацпроектов"
           >
             <header className="projects-rail-head">
-              <h2>Нацпроекты</h2>
+              <h2>Дерево</h2>
               <button
                 type="button"
                 className="rail-toggle"
                 aria-expanded={!railCollapsed}
                 aria-controls="projects-rail-list"
-                title={railCollapsed ? "Развернуть список нацпроектов" : "Сжать список нацпроектов"}
+                title={railCollapsed ? "Развернуть дерево" : "Сжать дерево"}
                 onClick={() => setRailCollapsed((value) => !value)}
               >
                 <span className="visually-hidden">
-                  {railCollapsed ? "Развернуть список нацпроектов" : "Сжать список нацпроектов"}
+                  {railCollapsed ? "Развернуть дерево" : "Сжать дерево"}
                 </span>
                 <span aria-hidden="true">{railCollapsed ? "›" : "‹"}</span>
               </button>
             </header>
             {railCollapsed ? (
-              <p className="projects-rail-strip">по бюджету</p>
+              <p className="projects-rail-strip">дерево</p>
             ) : (
               <div id="projects-rail-list" className="projects-rail-list">
-                <p className="queue-lead">По убыванию бюджета, 2025–2030.</p>
-                {ranked.map((project) => {
-                  const budget = budgetFor(project.id);
-                  const active = project.id === selectedProject.id;
-                  return (
-                    <button
-                      key={project.id}
-                      type="button"
-                      className={active ? "rail-project is-active" : "rail-project"}
-                      onClick={() => openProject(project)}
-                      aria-current={active ? "true" : undefined}
-                    >
-                      <span className="rail-project-top">
-                        {project.id === ACTIVE_NATIONAL_PROJECT_ID ? (
-                          <span className="ready-badge">разбираем</span>
-                        ) : (
-                          <span className="todo-badge">в работе</span>
-                        )}
-                        {budget ? (
-                          <span className="budget-pill">{formatBillionRub(budget.totalBillion)}</span>
+                <p className="queue-lead">
+                  Группа целей → нацпроект → федеральные проекты. Нажми строку — откроется канва.
+                </p>
+                <ul className="project-tree">
+                  {tree.map((branch) => {
+                    const groupOpen = expandedGroups.has(branch.group.id);
+                    return (
+                      <li key={branch.group.id} className="tree-branch">
+                        <button
+                          type="button"
+                          className="tree-row tree-group"
+                          aria-expanded={groupOpen}
+                          onClick={() => toggleGroup(branch.group.id)}
+                        >
+                          <span className="tree-twist" aria-hidden="true">
+                            {groupOpen ? "▾" : "▸"}
+                          </span>
+                          <span className="tree-label">{branch.group.title}</span>
+                          <span className="budget-pill">{formatBillionRub(branch.totalBillion)}</span>
+                        </button>
+                        {groupOpen ? (
+                          <ul className="tree-children">
+                            {branch.projects.map((project) => {
+                              const npOpen = expandedNps.has(project.id);
+                              const npActive = project.id === selectedProject?.id;
+                              const budget = budgetFor(project.id);
+                              return (
+                                <li key={project.id}>
+                                  <div className="tree-np-line">
+                                    <button
+                                      type="button"
+                                      className="tree-twist-btn"
+                                      aria-expanded={npOpen}
+                                      aria-label={
+                                        npOpen
+                                          ? `Свернуть федеральные проекты «${project.title}»`
+                                          : `Показать федеральные проекты «${project.title}»`
+                                      }
+                                      onClick={() => toggleNational(project.id)}
+                                    >
+                                      {npOpen ? "▾" : "▸"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={npActive ? "tree-row tree-np is-active" : "tree-row tree-np"}
+                                      onClick={() => openNational(project)}
+                                      aria-current={npActive ? "true" : undefined}
+                                    >
+                                      <span className="tree-label">{project.title}</span>
+                                      {project.id === ACTIVE_NATIONAL_PROJECT_ID ? (
+                                        <span className="ready-badge">разбираем</span>
+                                      ) : (
+                                        <span className="todo-badge">в работе</span>
+                                      )}
+                                      {budget ? (
+                                        <span className="budget-pill">
+                                          {formatBillionRub(budget.totalBillion)}
+                                        </span>
+                                      ) : null}
+                                    </button>
+                                  </div>
+                                  {npOpen ? (
+                                    <ul className="tree-children tree-fp-list">
+                                      {project.federalProjects.map((federal) => {
+                                        const fpActive =
+                                          npActive && selectedFp?.id === federal.id;
+                                        return (
+                                          <li key={federal.id}>
+                                            <button
+                                              type="button"
+                                              className={
+                                                fpActive
+                                                  ? "tree-row tree-fp is-active"
+                                                  : "tree-row tree-fp"
+                                              }
+                                              onClick={() => openFederal(project, federal)}
+                                            >
+                                              <span className="tree-label">{federal.title}</span>
+                                              {federal.status === "ready" ? (
+                                                <span className="ready-badge">разбираем</span>
+                                              ) : (
+                                                <span className="todo-badge">в работе</span>
+                                              )}
+                                            </button>
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  ) : null}
+                                </li>
+                              );
+                            })}
+                          </ul>
                         ) : null}
-                      </span>
-                      <strong>{project.title}</strong>
-                    </button>
-                  );
-                })}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
           </aside>
@@ -191,7 +313,7 @@ export function NationalProjectsApp() {
           <button
             type="button"
             className="rail-resizer"
-            aria-label="Ширина колонки нацпроектов"
+            aria-label="Ширина дерева"
             aria-orientation="vertical"
             aria-valuemin={RAIL_MIN}
             aria-valuemax={RAIL_MAX}
@@ -207,16 +329,6 @@ export function NationalProjectsApp() {
           <main className="chat-panel">
             <div className="thread">
               <ActiveWorkspace workspace={workspace} />
-              {isFamily ? (
-                <QueueBlock
-                  title="Остальные федеральные проекты «Семья»"
-                  items={
-                    nationalProjectById(ACTIVE_NATIONAL_PROJECT_ID)?.federalProjects.filter(
-                      (item) => item.id !== ACTIVE_FEDERAL_PROJECT_ID,
-                    ) ?? []
-                  }
-                />
-              ) : null}
             </div>
           </main>
 
@@ -329,27 +441,5 @@ function TaskRow({ task }: { task: WorkspaceTask }) {
       <strong>{task.title}</strong>
       <p>{task.detail}</p>
     </li>
-  );
-}
-
-function QueueBlock({
-  title,
-  items,
-}: {
-  title: string;
-  items: FederalProject[];
-}) {
-  return (
-    <section className="queue-block">
-      <h2>{title}</h2>
-      <ul className="todo-queue">
-        {items.map((item) => (
-          <li key={item.id}>
-            <strong>{item.title}</strong>
-            <span className="todo-badge">в работе</span>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

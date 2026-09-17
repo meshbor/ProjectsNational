@@ -239,7 +239,7 @@ body {
 }
 
 .workspace-projects {
-  grid-template-columns: var(--projects-rail-width, 280px) 8px minmax(0, 1fr) 320px;
+  grid-template-columns: var(--projects-rail-width, 320px) 8px minmax(0, 1fr) 320px;
 }
 
 .workspace-projects.is-resizing,
@@ -307,40 +307,109 @@ body {
 }
 
 .projects-rail-list .queue-lead {
-  margin: 0 2px 4px;
+  margin: 0 2px 8px;
 }
 
-.rail-project {
+.project-tree,
+.tree-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-branch + .tree-branch {
+  margin-top: 8px;
+}
+
+.tree-children {
+  padding-left: 12px;
+  margin-top: 4px;
   display: grid;
   gap: 4px;
-  width: 100%;
-  text-align: left;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card);
-  color: inherit;
-  font: inherit;
+}
+
+.tree-fp-list {
+  padding-left: 22px;
+}
+
+.tree-row,
+.tree-twist-btn {
+  border: 0;
   cursor: pointer;
+  font: inherit;
+  background: transparent;
+  color: inherit;
 }
 
-.rail-project:hover {
-  background: #f3f7f2;
-}
-
-.rail-project.is-active {
-  outline: 2px solid var(--leaf);
-  background: #fff;
-}
-
-.rail-project-top {
+.tree-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border-radius: 10px;
 }
 
-.rail-project .budget-pill {
-  margin-left: auto;
+.tree-row:hover {
+  background: #f3f7f2;
+}
+
+.tree-row.is-active {
+  background: #fff;
+  outline: 2px solid var(--leaf);
+}
+
+.tree-group {
+  padding: 8px 8px;
+  background: #f7f4ea;
+}
+
+.tree-group .tree-label {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.tree-np .tree-label {
+  font-weight: 650;
+}
+
+.tree-fp {
+  font-size: 13px;
+}
+
+.tree-label {
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.tree-twist {
+  width: 1em;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.tree-np-line {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.tree-twist-btn {
+  flex: 0 0 28px;
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.tree-twist-btn:hover {
+  background: #fff;
+}
+
+.tree-row .budget-pill,
+.tree-row .todo-badge,
+.tree-row .ready-badge {
+  flex: 0 0 auto;
 }
 
 .projects-rail.is-collapsed .projects-rail-head h2,
