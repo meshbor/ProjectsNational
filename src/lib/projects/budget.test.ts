@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { NATIONAL_PROJECTS } from "./data";
-import { everyProjectHasBudget, formatBillionRub, PROJECT_BUDGETS } from "./budget";
+import {
+  everyProjectHasBudget,
+  formatBillionRub,
+  PROJECT_BUDGETS,
+  projectsByBudgetDesc,
+} from "./budget";
 
 test("every national project has a total budget", () => {
   assert.equal(everyProjectHasBudget(), true);
@@ -14,4 +19,16 @@ test("every national project has a total budget", () => {
 test("formats trillions and billions", () => {
   assert.equal(formatBillionRub(17890), "17,89 трлн ₽");
   assert.equal(formatBillionRub(113), "113 млрд ₽");
+});
+
+test("national projects are ordered by descending budget", () => {
+  const ranked = projectsByBudgetDesc();
+  assert.equal(ranked[0].id, "family");
+  assert.equal(ranked.at(-1)?.id, "bioeconomy");
+  for (let index = 1; index < ranked.length; index += 1) {
+    assert.ok(
+      PROJECT_BUDGETS[ranked[index - 1].id].totalBillion >=
+        PROJECT_BUDGETS[ranked[index].id].totalBillion,
+    );
+  }
 });

@@ -6,7 +6,12 @@ import {
   NATIONAL_PROJECTS,
   projectHasReadyWork,
 } from "./data";
-import { LARGE_FAMILY_WORKSPACE, workspaceFor } from "./workspace";
+import {
+  LARGE_FAMILY_WORKSPACE,
+  draftWorkspaceFor,
+  workspaceFor,
+  workspaceForNationalProject,
+} from "./workspace";
 
 test("only one federal project is in the workspace", () => {
   const ready = NATIONAL_PROJECTS.flatMap((project) =>
@@ -39,5 +44,22 @@ test("large-family workspace does not invent contractor names", () => {
     ),
   );
   assert.ok(workspaceFor("family", "large-family"));
-  assert.equal(workspaceFor("youth", "Мы вместе"), null);
+  assert.equal(workspaceFor("family")?.title, "Многодетная семья");
+});
+
+test("other national projects open a draft workspace without invented contractors", () => {
+  const youth = NATIONAL_PROJECTS.find((project) => project.id === "youth");
+  assert.ok(youth);
+  const workspace = workspaceForNationalProject(youth);
+  assert.equal(workspace.title, "Молодёжь и дети");
+  assert.ok(
+    workspace.companies.slots.some(
+      (slot) => slot.role === "Подрядчики и исполнители закупок" && slot.name === null,
+    ),
+  );
+  const namedContractors = draftWorkspaceFor(youth).companies.slots.filter(
+    (slot) => slot.role === "Подрядчики и исполнители закупок" && slot.name,
+  );
+  assert.equal(namedContractors.length, 0);
+  assert.ok(workspaceFor("youth"));
 });

@@ -1,149 +1,167 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { DigestToolbar } from "@/components/digest-toolbar";
-import { MobileSheet } from "@/components/mobile-sheet";
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
   NATIONAL_PROJECTS,
-  PROJECT_GROUPS,
   PROJECT_SOURCES,
   RELATED_PROGRAMS,
-  federalProjectById,
   nationalProjectById,
-  projectHasReadyWork,
   type FederalProject,
   type NationalProject,
-  type ProjectGroupId,
 } from "@/lib/projects/data";
-import { budgetFor, formatBillionRub } from "@/lib/projects/budget";
-import { filterProjects } from "@/lib/projects/search";
+import { budgetFor, formatBillionRub, projectsByBudgetDesc } from "@/lib/projects/budget";
 import {
   LARGE_FAMILY_WORKSPACE,
-  workspaceFor,
+  workspaceForNationalProject,
   type CompanySlot,
   type FederalWorkspace,
   type WorkspaceTask,
 } from "@/lib/projects/workspace";
 
+const RAIL_DEFAULT = 280;
+const RAIL_MIN = 168;
+const RAIL_MAX = 440;
+const RAIL_COLLAPSED = 48;
+
 export function NationalProjectsApp() {
-  const [query, setQuery] = useState("");
   const [selectedNpId, setSelectedNpId] = useState(ACTIVE_NATIONAL_PROJECT_ID);
-  const [selectedFpId, setSelectedFpId] = useState(ACTIVE_FEDERAL_PROJECT_ID);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [railWidth, setRailWidth] = useState(RAIL_DEFAULT);
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const drag = useRef<{ startX: number; startWidth: number } | null>(null);
 
-  const filtered = useMemo(() => filterProjects(query, "all"), [query]);
+  const ranked = useMemo(() => projectsByBudgetDesc(NATIONAL_PROJECTS), []);
   const selectedProject =
-    filtered.find((project) => project.id === selectedNpId) ??
-    nationalProjectById(selectedNpId) ??
-    filtered[0] ??
-    NATIONAL_PROJECTS[0];
-  const selectedFp =
-    federalProjectById(selectedProject, selectedFpId) ??
-    selectedProject.federalProjects.find((item) => item.status === "ready") ??
-    selectedProject.federalProjects[0];
-  const workspace = selectedFp
-    ? workspaceFor(selectedProject.id, selectedFp.id)
-    : null;
+    nationalProjectById(selectedNpId) ?? ranked[0] ?? NATIONAL_PROJECTS[0];
+  const workspace = workspaceForNationalProject(selectedProject);
+  const columnWidth = railCollapsed ? RAIL_COLLAPSED : railWidth;
 
-  function openProject(project: NationalProject, fp?: FederalProject) {
-    const nextFp =
-      fp ??
-      project.federalProjects.find((item) => item.status === "ready") ??
-      project.federalProjects[0];
+  function openProject(project: NationalProject) {
     setSelectedNpId(project.id);
-    setSelectedFpId(nextFp.id);
-    setSheetOpen(true);
+  }
+
+  function onResizerPointerDown(event: PointerEvent<HTMLButtonElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = {
+      startX: event.clientX,
+      startWidth: railCollapsed ? RAIL_DEFAULT : railWidth,
+    };
+    if (railCollapsed) setRailCollapsed(false);
+  }
+
+  function onResizerPointerMove(event: PointerEvent<HTMLButtonElement>) {
+    if (!drag.current) return;
+    const next = drag.current.startWidth + (event.clientX - drag.current.startX);
+    if (next < 120) {
+      setRailCollapsed(true);
+      return;
+    }
+    setRailCollapsed(false);
+    setRailWidth(Math.min(RAIL_MAX, Math.max(RAIL_MIN, next)));
+  }
+
+  function onResizerPointerUp() {
+    drag.current = null;
   }
 
   return (
     <div className="app-shell">
       <nav className="site-tabs" aria-label="Рабочее место">
         <strong className="site-brand">нацпроекты</strong>
-        <p className="site-brand-note">одно место · один федеральный проект</p>
+        <p className="site-brand-note">каталог слева · канва в центре</p>
       </nav>
 
       <div className="section-shell">
-        <DigestToolbar description="Сейчас разбираем ФП «Многодетная семья». Остальные — в работе." />
+        <DigestToolbar
+          description={
+            selectedProject.id === ACTIVE_NATIONAL_PROJECT_ID
+              ? "Сейчас разбираем ФП «Многодетная семья». Остальные — в работе."
+              : `Канва НП «${selectedProject.title}». Подрядчиков не выдумываем.`
+          }
+        />
 
-        <div className="workspace workspace-projects">
+        <div
+          className="workspace workspace-projects"
+          style={{ "--projects-rail-width": `${columnWidth}px` } as CSSProperties}
+        >
+          <aside
+            className={railCollapsed ? "projects-rail is-collapsed" : "projects-rail"}
+            aria-label="Нацпроекты"
+          >
+            <header className="projects-rail-head">
+              <h2>Нацпроекты</h2>
+              <button
+                type="button"
+                className="rail-toggle"
+                aria-expanded={!railCollapsed}
+                onClick={() => setRailCollapsed((value) => !value)}
+              >
+                {railCollapsed ? "Развернуть" : "Сжать"}
+              </button>
+            </header>
+            {railCollapsed ? (
+              <p className="projects-rail-strip">по бюджету</p>
+            ) : (
+              <div className="projects-rail-list">
+                <p className="queue-lead">По убыванию бюджета, 2025–2030.</p>
+                {ranked.map((project) => {
+                  const budget = budgetFor(project.id);
+                  const active = project.id === selectedProject.id;
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      className={active ? "rail-project is-active" : "rail-project"}
+                      onClick={() => openProject(project)}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <span className="rail-project-top">
+                        {project.id === ACTIVE_NATIONAL_PROJECT_ID ? (
+                          <span className="ready-badge">разбираем</span>
+                        ) : (
+                          <span className="todo-badge">в работе</span>
+                        )}
+                        {budget ? (
+                          <span className="budget-pill">{formatBillionRub(budget.totalBillion)}</span>
+                        ) : null}
+                      </span>
+                      <strong>{project.title}</strong>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </aside>
+
+          <button
+            type="button"
+            className="rail-resizer"
+            aria-label="Ширина колонки нацпроектов"
+            onPointerDown={onResizerPointerDown}
+            onPointerMove={onResizerPointerMove}
+            onPointerUp={onResizerPointerUp}
+            onPointerCancel={onResizerPointerUp}
+          />
+
           <main className="chat-panel">
-            {/* TODO(search): вернуть поиск по нацпроектам, когда появится разбор федеральных проектов и компаний. */}
-            <form
-              className="composer is-parked"
-              onSubmit={(event) => event.preventDefault()}
-              hidden
-            >
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Искать: семья, данные, дроны, ипотека"
-                aria-label="Поиск по нацпроектам"
-              />
-            </form>
-
             <div className="thread">
-              <ActiveWorkspace workspace={LARGE_FAMILY_WORKSPACE} />
-
-              <QueueBlock
-                title="Остальные федеральные проекты «Семья»"
-                items={
-                  nationalProjectById(ACTIVE_NATIONAL_PROJECT_ID)?.federalProjects.filter(
-                    (item) => item.id !== ACTIVE_FEDERAL_PROJECT_ID,
-                  ) ?? []
-                }
-                onOpen={(fp) =>
-                  openProject(nationalProjectById(ACTIVE_NATIONAL_PROJECT_ID)!, fp)
-                }
-              />
-
-              <section className="queue-block">
-                <h2>Остальные нацпроекты</h2>
-                <p className="queue-lead">Пока туду: в работе, без выдуманных компаний и задач.</p>
-                <div className="news-list">
-                  {filtered
-                    .filter((project) => project.id !== ACTIVE_NATIONAL_PROJECT_ID)
-                    .map((project) => {
-                      const budget = budgetFor(project.id);
-                      return (
-                        <button
-                          key={project.id}
-                          type="button"
-                          className="news-card"
-                          onClick={() => openProject(project)}
-                          aria-haspopup="dialog"
-                        >
-                          <div className="news-meta">
-                            <span className="fresh">{groupLabel(project.group)}</span>
-                            <span className="todo-badge">в работе</span>
-                            {budget ? (
-                              <span className="budget-pill">{formatBillionRub(budget.totalBillion)}</span>
-                            ) : null}
-                          </div>
-                          <strong>{project.title}</strong>
-                          <p>{project.goal}</p>
-                        </button>
-                      );
-                    })}
-                </div>
-              </section>
+              <ActiveWorkspace workspace={workspace} />
+              {selectedProject.id === ACTIVE_NATIONAL_PROJECT_ID ? (
+                <QueueBlock
+                  title="Остальные федеральные проекты «Семья»"
+                  items={
+                    nationalProjectById(ACTIVE_NATIONAL_PROJECT_ID)?.federalProjects.filter(
+                      (item) => item.id !== ACTIVE_FEDERAL_PROJECT_ID,
+                    ) ?? []
+                  }
+                />
+              ) : null}
             </div>
           </main>
 
           <aside className="detail keep-on-mobile">
-            <div className="desktop-only-detail">
-              {workspace || !selectedFp ? (
-                <div className="empty-detail">
-                  <p>
-                    Слева одно рабочее место — ФП «Многодетная семья». Остальные
-                    нацпроекты открываются как туду «в работе».
-                  </p>
-                </div>
-              ) : (
-                <TodoCard project={selectedProject} federal={selectedFp} />
-              )}
-            </div>
             <section className="maps">
               <h2>Источники</h2>
               {PROJECT_SOURCES.map((link) => (
@@ -162,14 +180,6 @@ export function NationalProjectsApp() {
           </aside>
         </div>
       </div>
-
-      <MobileSheet
-        open={sheetOpen && !workspace && Boolean(selectedFp)}
-        onClose={() => setSheetOpen(false)}
-        title="В работе"
-      >
-        {selectedFp ? <TodoCard project={selectedProject} federal={selectedFp} /> : null}
-      </MobileSheet>
     </div>
   );
 }
@@ -177,11 +187,14 @@ export function NationalProjectsApp() {
 function ActiveWorkspace({ workspace }: { workspace: FederalWorkspace }) {
   const project = nationalProjectById(workspace.nationalProjectId);
   const budget = project ? budgetFor(project.id) : undefined;
+  const isFederal = workspace.id === LARGE_FAMILY_WORKSPACE.id;
   return (
     <section className="selected-card workspace-home">
       <p className="bubble-kicker">Рабочее место</p>
       <p className="fp-crumb">
-        НП «{project?.title}» → ФП «{workspace.title}»
+        {isFederal
+          ? `НП «${project?.title}» → ФП «${workspace.title}»`
+          : `НП «${project?.title}»`}
       </p>
       <h2>{workspace.title}</h2>
       <p className="why">{workspace.summary}</p>
@@ -263,11 +276,9 @@ function TaskRow({ task }: { task: WorkspaceTask }) {
 function QueueBlock({
   title,
   items,
-  onOpen,
 }: {
   title: string;
   items: FederalProject[];
-  onOpen: (fp: FederalProject) => void;
 }) {
   return (
     <section className="queue-block">
@@ -275,69 +286,11 @@ function QueueBlock({
       <ul className="todo-queue">
         {items.map((item) => (
           <li key={item.id}>
-            <button type="button" onClick={() => onOpen(item)}>
-              <strong>{item.title}</strong>
-              <span className="todo-badge">в работе</span>
-            </button>
+            <strong>{item.title}</strong>
+            <span className="todo-badge">в работе</span>
           </li>
         ))}
       </ul>
     </section>
   );
-}
-
-function TodoCard({
-  project,
-  federal,
-}: {
-  project: NationalProject;
-  federal: FederalProject;
-}) {
-  const ready = projectHasReadyWork(project);
-  return (
-    <section className="selected-card">
-      <p className="bubble-kicker">{groupLabel(project.group)}</p>
-      <p className="fp-crumb">
-        НП «{project.title}» → ФП «{federal.title}»
-      </p>
-      <h2>{federal.title}</h2>
-      <p className="why">
-        Этот федеральный проект ещё в работе. Сейчас одно рабочее место — «Многодетная семья».
-        Здесь не заполняем компании и задачи, чтобы не выдумывать.
-      </p>
-      <p>
-        <span className="todo-badge">в работе</span>
-      </p>
-      <dl>
-        <div>
-          <dt>Нацпроект</dt>
-          <dd>{project.title}</dd>
-        </div>
-        <div>
-          <dt>Куратор / ФОИВ</dt>
-          <dd>
-            {project.curator} · {project.agency}
-          </dd>
-        </div>
-      </dl>
-      <h3>Федеральные проекты этого нацпроекта</h3>
-      <ul className="todo-queue">
-        {project.federalProjects.map((item) => (
-          <li key={item.id}>
-            <strong>{item.title}</strong>{" "}
-            <span className={item.status === "ready" ? "ready-badge" : "todo-badge"}>
-              {item.status === "ready" ? "разбираем" : "в работе"}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {!ready ? (
-        <p className="queue-lead">Туду: разобрать паспорт, меры, закупки и исполнителей.</p>
-      ) : null}
-    </section>
-  );
-}
-
-function groupLabel(id: ProjectGroupId) {
-  return PROJECT_GROUPS.find((group) => group.id === id)?.title ?? id;
 }

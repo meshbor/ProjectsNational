@@ -68,6 +68,14 @@ export function budgetFor(projectId: string) {
   return PROJECT_BUDGETS[projectId];
 }
 
+export function budgetTotal(projectId: string) {
+  return PROJECT_BUDGETS[projectId]?.totalBillion ?? 0;
+}
+
+export function projectsByBudgetDesc(projects = NATIONAL_PROJECTS) {
+  return [...projects].sort((left, right) => budgetTotal(right.id) - budgetTotal(left.id));
+}
+
 export function everyProjectHasBudget() {
   return NATIONAL_PROJECTS.every((project) => Boolean(PROJECT_BUDGETS[project.id]));
 }

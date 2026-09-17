@@ -1,6 +1,8 @@
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
+  nationalProjectById,
+  type NationalProject,
   type WorkStatus,
 } from "./data";
 
@@ -95,12 +97,70 @@ export const LARGE_FAMILY_WORKSPACE: FederalWorkspace = {
   ],
 };
 
-export function workspaceFor(nationalProjectId: string, federalProjectId: string) {
+export function draftWorkspaceFor(project: NationalProject): FederalWorkspace {
+  return {
+    id: project.id,
+    nationalProjectId: project.id,
+    title: project.title,
+    summary: project.goal,
+    knownMeasures: project.highlights,
+    companies: {
+      note: "Имена подрядчиков и региональных операторов не выдумываем. Появятся после разбора паспорта и закупок.",
+      slots: [
+        {
+          role: "Ответственный ФОИВ",
+          name: project.agency,
+          note: `По паспорту нацпроекта «${project.title}»`,
+        },
+        {
+          role: "Куратор в Правительстве",
+          name: project.curator,
+          note: `Куратор нацпроекта «${project.title}»`,
+        },
+        {
+          role: "Руководитель",
+          name: project.lead,
+          note: "По открытым материалам нацпроекта",
+        },
+        {
+          role: "Подрядчики и исполнители закупок",
+          name: null,
+          note: "TODO: выгрузить из ЕИС по ФП, без выдуманных компаний",
+        },
+      ],
+    },
+    tasks: [
+      {
+        title: `Сверить меры с паспортом НП «${project.title}»`,
+        status: "todo",
+        detail: "Отделить подтверждённые меры от обзора. Компании и контракты не заполняем с потолка.",
+      },
+      ...project.federalProjects.map((item) => ({
+        title: `ФП «${item.title}»`,
+        status: item.status,
+        detail:
+          item.status === "ready"
+            ? "Разбираем в канве этого нацпроекта."
+            : "В работе: паспорт ФП, меры, закупки и исполнители.",
+      })),
+    ],
+  };
+}
+
+export function workspaceForNationalProject(project: NationalProject) {
+  if (project.id === ACTIVE_NATIONAL_PROJECT_ID) {
+    return LARGE_FAMILY_WORKSPACE;
+  }
+  return draftWorkspaceFor(project);
+}
+
+export function workspaceFor(nationalProjectId: string, federalProjectId?: string) {
   if (
     nationalProjectId === LARGE_FAMILY_WORKSPACE.nationalProjectId &&
-    federalProjectId === LARGE_FAMILY_WORKSPACE.id
+    (!federalProjectId || federalProjectId === LARGE_FAMILY_WORKSPACE.id)
   ) {
     return LARGE_FAMILY_WORKSPACE;
   }
-  return null;
+  const project = nationalProjectById(nationalProjectId);
+  return project ? draftWorkspaceFor(project) : null;
 }
