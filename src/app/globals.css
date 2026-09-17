@@ -239,7 +239,11 @@ body {
 }
 
 .workspace-projects {
-  grid-template-columns: var(--projects-rail-width, 280px) 8px minmax(0, 1fr) 320px;
+  grid-template-columns: var(--projects-rail-width, 320px) 8px minmax(0, 1fr) minmax(0, 320px);
+}
+
+.workspace-projects.is-rail-wide {
+  grid-template-columns: var(--projects-rail-width, 320px) 8px minmax(0, 1fr) minmax(0, 200px);
 }
 
 .workspace-projects.is-resizing,
@@ -260,10 +264,16 @@ body {
 
 .projects-rail-head {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px 0;
+}
+
+.projects-rail-head-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 12px 0;
 }
 
 .projects-rail-head h2 {
@@ -272,6 +282,19 @@ body {
   font-size: 16px;
 }
 
+.rail-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.rail-layout {
+  display: flex;
+  gap: 4px;
+}
+
+.rail-layout-btn,
 .rail-toggle {
   border: 0;
   cursor: pointer;
@@ -279,11 +302,57 @@ body {
   min-width: 32px;
   min-height: 32px;
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: 10px;
   background: #fff;
   color: var(--ink);
   font-size: 18px;
   line-height: 1;
+}
+
+.rail-layout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  color: var(--leaf-deep);
+}
+
+.rail-layout-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.rail-layout-btn.is-active {
+  outline: 2px solid var(--leaf);
+  background: #f3f7f2;
+}
+
+.rail-view {
+  display: flex;
+  width: 100%;
+  padding: 2px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.rail-view button {
+  flex: 1;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.rail-view button.is-active {
+  background: var(--leaf-deep);
+  color: #f6f3ea;
 }
 
 .visually-hidden {
@@ -307,7 +376,7 @@ body {
 }
 
 .projects-rail-list .queue-lead {
-  margin: 0 2px 4px;
+  margin: 0 2px 8px;
 }
 
 .rail-project {
@@ -343,14 +412,122 @@ body {
   margin-left: auto;
 }
 
+.project-tree,
+.tree-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-branch + .tree-branch {
+  margin-top: 8px;
+}
+
+.tree-children {
+  padding-left: 12px;
+  margin-top: 4px;
+  display: grid;
+  gap: 4px;
+}
+
+.tree-fp-list {
+  padding-left: 22px;
+}
+
+.tree-row,
+.tree-twist-btn {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  background: transparent;
+  color: inherit;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border-radius: 10px;
+}
+
+.tree-row:hover {
+  background: #f3f7f2;
+}
+
+.tree-row.is-active {
+  background: #fff;
+  outline: 2px solid var(--leaf);
+}
+
+.tree-group {
+  padding: 8px 8px;
+  background: #f7f4ea;
+}
+
+.tree-group .tree-label {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.tree-np .tree-label {
+  font-weight: 650;
+}
+
+.tree-fp {
+  font-size: 13px;
+}
+
+.tree-label {
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.tree-twist {
+  width: 1em;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.tree-np-line {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.tree-twist-btn {
+  flex: 0 0 28px;
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.tree-twist-btn:hover {
+  background: #fff;
+}
+
+.tree-row .budget-pill,
+.tree-row .todo-badge,
+.tree-row .ready-badge {
+  flex: 0 0 auto;
+}
+
 .projects-rail.is-collapsed .projects-rail-head h2,
-.projects-rail.is-collapsed .projects-rail-list {
+.projects-rail.is-collapsed .projects-rail-list,
+.projects-rail.is-collapsed .rail-view,
+.projects-rail.is-collapsed .rail-layout {
   display: none;
 }
 
 .projects-rail.is-collapsed .projects-rail-head {
   flex-direction: column;
   padding: 10px 6px;
+}
+
+.projects-rail.is-collapsed .projects-rail-head-row {
+  justify-content: center;
 }
 
 .projects-rail-strip {
@@ -908,7 +1085,8 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .rail-resizer {
+  .rail-resizer,
+  .rail-layout {
     display: none;
   }
 
