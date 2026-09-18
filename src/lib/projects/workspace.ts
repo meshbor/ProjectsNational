@@ -6,7 +6,10 @@ import {
   type WorkStatus,
 } from "./data";
 
+export type CompanyKind = "agency" | "curator" | "lead" | "region" | "vendor";
+
 export type CompanySlot = {
+  kind: CompanyKind;
   role: string;
   name: string | null;
   note: string;
@@ -47,21 +50,25 @@ export const LARGE_FAMILY_WORKSPACE: FederalWorkspace = {
     note: "Имена подрядчиков и региональных операторов не выдумываем. Появятся после разбора паспорта ФП и закупок.",
     slots: [
       {
+        kind: "agency",
         role: "Ответственный ФОИВ",
         name: "Минтруд",
         note: "По паспорту нацпроекта «Семья»",
       },
       {
+        kind: "curator",
         role: "Куратор в Правительстве",
         name: "Т. А. Голикова",
         note: "Куратор нацпроекта «Семья»",
       },
       {
+        kind: "region",
         role: "Региональные органы и операторы мер",
         name: null,
         note: "TODO: кто в субъекте ведёт статус многодетной семьи и выплаты — из паспорта и региональных актов",
       },
       {
+        kind: "vendor",
         role: "Подрядчики и исполнители закупок",
         name: null,
         note: "TODO: выгрузить из ЕИС по ФП, без выдуманных компаний",
@@ -108,21 +115,25 @@ export function draftWorkspaceFor(project: NationalProject): FederalWorkspace {
       note: "Имена подрядчиков и региональных операторов не выдумываем. Появятся после разбора паспорта и закупок.",
       slots: [
         {
+          kind: "agency",
           role: "Ответственный ФОИВ",
           name: project.agency,
           note: `По паспорту нацпроекта «${project.title}»`,
         },
         {
+          kind: "curator",
           role: "Куратор в Правительстве",
           name: project.curator,
           note: `Куратор нацпроекта «${project.title}»`,
         },
         {
+          kind: "lead",
           role: "Руководитель",
           name: project.lead,
           note: "По открытым материалам нацпроекта",
         },
         {
+          kind: "vendor",
           role: "Подрядчики и исполнители закупок",
           name: null,
           note: "TODO: выгрузить из ЕИС по ФП, без выдуманных компаний",
