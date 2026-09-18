@@ -69,6 +69,15 @@ test("other national projects open a draft workspace without invented contractor
   assert.equal(workspaceFor("missing-project"), null);
 });
 
+test("исполнители помечены ролями, подрядчиков не выдумываем", () => {
+  const kinds = LARGE_FAMILY_WORKSPACE.companies.slots.map((slot) => slot.kind);
+  assert.deepEqual(kinds, ["agency", "curator", "region", "vendor"]);
+  assert.equal(
+    LARGE_FAMILY_WORKSPACE.companies.slots.find((slot) => slot.kind === "vendor")?.name,
+    null,
+  );
+});
+
 test("family keeps the detailed canvas; other NPs use a catalog draft", () => {
   const family = nationalProjectById("family");
   const youth = nationalProjectById("youth");
