@@ -10,6 +10,7 @@ import {
   type PointerEvent,
 } from "react";
 import { DigestToolbar } from "@/components/digest-toolbar";
+import { GlossaryHint } from "@/components/glossary-hint";
 import { usePhoneLayout } from "@/components/mobile-sheet";
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
@@ -30,8 +31,6 @@ import {
   RAIL_DEFAULT,
   RAIL_MIN,
   clampRailWidth,
-  fixedRailWidth,
-  railLayoutPreset,
   railMaxForWorkspace,
   railViewCaption,
   twoThirdsRailWidth,
@@ -42,6 +41,7 @@ import {
   LARGE_FAMILY_WORKSPACE,
   workspaceFor,
   workspaceForNationalProject,
+  type CompanyKind,
   type CompanySlot,
   type FederalWorkspace,
   type WorkspaceTask,
@@ -80,9 +80,6 @@ export function NationalProjectsApp() {
     : LARGE_FAMILY_WORKSPACE;
   const railMax = railMaxForWorkspace(workspaceWidth);
   const columnWidth = railCollapsed ? RAIL_COLLAPSED : railWidth;
-  const layoutPreset = railCollapsed
-    ? "custom"
-    : railLayoutPreset(railWidth, workspaceWidth);
   const isFamilyCanvas = workspace.id === LARGE_FAMILY_WORKSPACE.id;
   const isRailWide = !railCollapsed && railWidth >= workspaceWidth * 0.5 && workspaceWidth > 0;
 
@@ -142,19 +139,6 @@ export function NationalProjectsApp() {
     setRailWidth(clampRailWidth(next, railMax));
   }
 
-  function applyFixedLayout() {
-    applyRailWidth(fixedRailWidth(workspaceWidth));
-  }
-
-  function applyWideLayout() {
-    applyRailWidth(twoThirdsRailWidth(workspaceWidth));
-  }
-
-  function chooseRailView(next: RailView) {
-    setRailView(next);
-    if (next === "scheme" && railView !== "scheme") applyWideLayout();
-  }
-
   function onResizerPointerDown(event: PointerEvent<HTMLButtonElement>) {
     if (isPhone) return;
     event.preventDefault();
@@ -199,7 +183,7 @@ export function NationalProjectsApp() {
       applyRailWidth(RAIL_MIN);
     } else if (event.key === "End") {
       event.preventDefault();
-      applyWideLayout();
+      applyRailWidth(twoThirdsRailWidth(workspaceWidth));
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       setRailCollapsed((value) => !value);
@@ -209,7 +193,10 @@ export function NationalProjectsApp() {
   return (
     <div className="app-shell">
       <nav className="site-tabs" aria-label="Рабочее место">
-        <strong className="site-brand">нацпроекты</strong>
+        <div className="site-brand-cluster">
+          <strong className="site-brand">нацпроекты</strong>
+          <GlossaryHint />
+        </div>
         <p className="site-brand-note">каталог слева · канва в центре</p>
       </nav>
 
@@ -242,28 +229,6 @@ export function NationalProjectsApp() {
               <div className="projects-rail-head-row">
                 <h2>Нацпроекты</h2>
                 <div className="rail-tools">
-                  <div className="rail-layout" role="group" aria-label="Ширина колонки">
-                    <button
-                      type="button"
-                      className={layoutPreset === "fixed" ? "rail-layout-btn is-active" : "rail-layout-btn"}
-                      aria-pressed={layoutPreset === "fixed"}
-                      title="Узкая колонка"
-                      onClick={applyFixedLayout}
-                    >
-                      <span className="visually-hidden">Узкая колонка</span>
-                      <NarrowRailIcon />
-                    </button>
-                    <button
-                      type="button"
-                      className={layoutPreset === "wide" ? "rail-layout-btn is-active" : "rail-layout-btn"}
-                      aria-pressed={layoutPreset === "wide"}
-                      title="На ⅔ экрана"
-                      onClick={applyWideLayout}
-                    >
-                      <span className="visually-hidden">На ⅔ экрана</span>
-                      <WideRailIcon />
-                    </button>
-                  </div>
                   <button
                     type="button"
                     className="rail-toggle"
@@ -286,7 +251,7 @@ export function NationalProjectsApp() {
                     className={railView === "list" ? "is-active" : undefined}
                     aria-pressed={railView === "list"}
                     title="Список"
-                    onClick={() => chooseRailView("list")}
+                    onClick={() => setRailView("list")}
                   >
                     <ListViewIcon />
                     Список
@@ -296,7 +261,7 @@ export function NationalProjectsApp() {
                     className={railView === "tree" ? "is-active" : undefined}
                     aria-pressed={railView === "tree"}
                     title="Дерево"
-                    onClick={() => chooseRailView("tree")}
+                    onClick={() => setRailView("tree")}
                   >
                     <TreeViewIcon />
                     Дерево
@@ -306,7 +271,7 @@ export function NationalProjectsApp() {
                     className={railView === "scheme" ? "is-active" : undefined}
                     aria-pressed={railView === "scheme"}
                     title="Схема"
-                    onClick={() => chooseRailView("scheme")}
+                    onClick={() => setRailView("scheme")}
                   >
                     <SchemeViewIcon />
                     Схема
@@ -399,24 +364,6 @@ export function NationalProjectsApp() {
   );
 }
 
-function NarrowRailIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <rect x="1.5" y="2" width="4.5" height="12" rx="1" />
-      <rect x="7.5" y="2" width="7" height="12" rx="1" opacity="0.35" />
-    </svg>
-  );
-}
-
-function WideRailIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <rect x="1.5" y="2" width="9.5" height="12" rx="1" />
-      <rect x="12" y="2" width="2.5" height="12" rx="1" opacity="0.35" />
-    </svg>
-  );
-}
-
 function ListViewIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -466,7 +413,7 @@ function RailList({
 }) {
   return (
     <>
-      <p className="queue-lead">По убыванию бюджета, 2025–2030. Нажми карточку — откроется канва.</p>
+      <p className="queue-lead">По убыванию бюджета, 2025–2030.</p>
       {ranked.map((project) => {
         const budget = budgetFor(project.id);
         const active = project.id === selectedId;
@@ -519,9 +466,7 @@ function RailTree({
 }) {
   return (
     <>
-      <p className="queue-lead">
-        Группа целей → нацпроект → федеральные проекты. Нажми строку — откроется канва.
-      </p>
+      <p className="queue-lead">Группа целей → нацпроект → федеральные проекты.</p>
       <ul className="project-tree">
         {tree.map((branch) => {
           const groupOpen = expandedGroups.has(branch.group.id);
@@ -638,8 +583,7 @@ function RailScheme({
   return (
     <>
       <p className="queue-lead">
-        Блок-схема как генеалогическое древо: группа → нацпроекты → федеральные. Нажми блок —
-        откроется канва.
+        Блок-схема как генеалогическое древо: группа → нацпроекты → федеральные.
       </p>
       <div className="scheme-forest">
         {tree.map((branch) => {
@@ -754,26 +698,25 @@ function ActiveWorkspace({ workspace }: { workspace: FederalWorkspace }) {
       <h2>{workspace.title}</h2>
       <p className="why">{workspace.summary}</p>
       {project ? (
-        <dl>
-          <div>
-            <dt>Бюджет нацпроекта «{project.title}»</dt>
-            <dd>
-              {budget ? formatBillionRub(budget.totalBillion) : "не опубликован"}
-              {budget?.federalBillion != null || budget?.extraBillion ? (
-                <span className="budget-split">
-                  {budget.federalBillion ? ` ФБ ${formatBillionRub(budget.federalBillion)}` : ""}
-                  {budget.extraBillion ? ` · внебюджет ${formatBillionRub(budget.extraBillion)}` : ""}
-                </span>
-              ) : null}
-            </dd>
+        <div className="fact-tiles">
+          <div className="fact-tile">
+            <span>Бюджет НП «{project.title}»</span>
+            <strong>{budget ? formatBillionRub(budget.totalBillion) : "не опубликован"}</strong>
+            {budget?.federalBillion != null || budget?.extraBillion ? (
+              <em>
+                {budget.federalBillion ? `ФБ ${formatBillionRub(budget.federalBillion)}` : ""}
+                {budget.extraBillion ? ` · внебюджет ${formatBillionRub(budget.extraBillion)}` : ""}
+              </em>
+            ) : null}
           </div>
-          <div>
-            <dt>Куратор / ФОИВ / руководитель</dt>
-            <dd>
-              {project.curator} · {project.agency} · {project.lead}
-            </dd>
+          <div className="fact-tile">
+            <span>Кто ведёт НП</span>
+            <strong>{project.agency}</strong>
+            <em>
+              куратор {project.curator} · руководитель {project.lead}
+            </em>
           </div>
-        </dl>
+        </div>
       ) : null}
       <WorkspaceBody workspace={workspace} />
     </section>
@@ -783,32 +726,61 @@ function ActiveWorkspace({ workspace }: { workspace: FederalWorkspace }) {
 function WorkspaceBody({ workspace }: { workspace: FederalWorkspace }) {
   return (
     <>
-      <h3>Что уже известно</h3>
-      <ul>
-        {workspace.knownMeasures.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-      <h3>Компании и исполнители</h3>
-      <p className="queue-lead">{workspace.companies.note}</p>
-      <ul className="company-list">
-        {workspace.companies.slots.map((slot) => (
-          <CompanyRow key={slot.role} slot={slot} />
-        ))}
-      </ul>
-      <h3>Задачи</h3>
-      <ul className="task-list">
-        {workspace.tasks.map((task) => (
-          <TaskRow key={task.title} task={task} />
-        ))}
-      </ul>
+      <section className="canvas-block">
+        <h3>Что уже известно</h3>
+        <p className="queue-lead">Меры и факты из открытых материалов по этому проекту.</p>
+        <ul>
+          {workspace.knownMeasures.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </section>
+      <section className="canvas-block">
+        <h3>Компании и исполнители</h3>
+        <p className="queue-lead">
+          Разные ответственные: ведомство (ФОИВ), куратор в Правительстве, регионы и подрядчики.
+          Цвет плитки — роль. Имена компаний не выдумываем.
+        </p>
+        <ul className="company-list">
+          {workspace.companies.slots.map((slot) => (
+            <CompanyRow key={slot.role} slot={slot} />
+          ))}
+        </ul>
+      </section>
+      <section className="canvas-block">
+        <h3>Задачи</h3>
+        <p className="queue-lead">
+          Это не поручения из паспорта, а наш список разбора: что уже подтверждено открытыми
+          материалами и какие пробелы ещё закрыть.
+        </p>
+        <ul className="task-list">
+          {workspace.tasks.map((task) => (
+            <TaskRow key={task.title} task={task} />
+          ))}
+        </ul>
+      </section>
     </>
   );
 }
 
+const COMPANY_KIND_LABEL: Record<CompanyKind, string> = {
+  agency: "ведомство",
+  curator: "куратор",
+  lead: "руководитель",
+  region: "регион",
+  vendor: "закупки",
+};
+
 function CompanyRow({ slot }: { slot: CompanySlot }) {
   return (
-    <li className={slot.name ? "company-slot" : "company-slot is-todo"}>
+    <li
+      className={
+        slot.name
+          ? `company-tile is-${slot.kind}`
+          : `company-tile is-${slot.kind} is-todo`
+      }
+    >
+      <span className="company-kind">{COMPANY_KIND_LABEL[slot.kind]}</span>
       <strong>{slot.role}</strong>
       <span>{slot.name ?? "пока пусто"}</span>
       <em>{slot.note}</em>
@@ -818,7 +790,7 @@ function CompanyRow({ slot }: { slot: CompanySlot }) {
 
 function TaskRow({ task }: { task: WorkspaceTask }) {
   return (
-    <li className={task.status === "ready" ? "task-row" : "task-row is-todo"}>
+    <li className={task.status === "ready" ? "task-tile is-ready" : "task-tile is-todo"}>
       <span className={task.status === "ready" ? "ready-badge" : "todo-badge"}>
         {task.status === "ready" ? "известно" : "в работе"}
       </span>
