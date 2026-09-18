@@ -1,7 +1,9 @@
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
+  federalProjectById,
   nationalProjectById,
+  type FederalProject,
   type NationalProject,
   type WorkStatus,
 } from "./data";
@@ -24,6 +26,7 @@ export type WorkspaceTask = {
 export type FederalWorkspace = {
   id: string;
   nationalProjectId: string;
+  federalProjectId?: string;
   title: string;
   summary: string;
   knownMeasures: string[];
@@ -38,6 +41,7 @@ export type FederalWorkspace = {
 export const LARGE_FAMILY_WORKSPACE: FederalWorkspace = {
   id: ACTIVE_FEDERAL_PROJECT_ID,
   nationalProjectId: ACTIVE_NATIONAL_PROJECT_ID,
+  federalProjectId: ACTIVE_FEDERAL_PROJECT_ID,
   title: "Многодетная семья",
   summary:
     "Федеральный проект внутри нацпроекта «Семья»: поддержка семей с тремя и более детьми. Здесь одно рабочее место — меры, исполнители и задачи. Остальные федеральные и национальные проекты пока в очереди.",
@@ -151,27 +155,56 @@ export function draftWorkspaceFor(project: NationalProject): FederalWorkspace {
         status: item.status,
         detail:
           item.status === "ready"
-            ? "Разбираем в канве этого нацпроекта."
+            ? "Есть разобранная канва — открой этот ФП в дереве или схеме."
             : "В работе: паспорт ФП, меры, закупки и исполнители.",
       })),
     ],
   };
 }
 
+export function draftWorkspaceForFederal(
+  project: NationalProject,
+  federal: FederalProject,
+): FederalWorkspace {
+  return {
+    id: `${project.id}/${federal.id}`,
+    nationalProjectId: project.id,
+    federalProjectId: federal.id,
+    title: federal.title,
+    summary: `Федеральный проект внутри НП «${project.title}». Паспорт ещё не разбирали — меры и подрядчиков не выдумываем.`,
+    knownMeasures: [
+      `Это ФП нацпроекта «${project.title}». Подтверждённые меры появятся после разбора паспорта.`,
+    ],
+    companies: draftWorkspaceFor(project).companies,
+    tasks: [
+      {
+        title: `Сверить паспорт ФП «${federal.title}»`,
+        status: "todo",
+        detail: "Отделить подтверждённые меры от обзора. Компании и контракты не заполняем с потолка.",
+      },
+      {
+        title: "Закупки и исполнители",
+        status: "todo",
+        detail: "В работе: объекты и контракты из ЕИС по этому ФП.",
+      },
+    ],
+  };
+}
+
 export function workspaceForNationalProject(project: NationalProject) {
-  if (project.id === ACTIVE_NATIONAL_PROJECT_ID) {
-    return LARGE_FAMILY_WORKSPACE;
-  }
   return draftWorkspaceFor(project);
 }
 
 export function workspaceFor(nationalProjectId: string, federalProjectId?: string) {
+  const project = nationalProjectById(nationalProjectId);
+  if (!project) return null;
+  if (!federalProjectId) return draftWorkspaceFor(project);
   if (
     nationalProjectId === LARGE_FAMILY_WORKSPACE.nationalProjectId &&
-    (!federalProjectId || federalProjectId === LARGE_FAMILY_WORKSPACE.id)
+    federalProjectId === LARGE_FAMILY_WORKSPACE.id
   ) {
     return LARGE_FAMILY_WORKSPACE;
   }
-  const project = nationalProjectById(nationalProjectId);
-  return project ? draftWorkspaceFor(project) : null;
+  const federal = federalProjectById(project, federalProjectId);
+  return federal ? draftWorkspaceForFederal(project, federal) : draftWorkspaceFor(project);
 }
