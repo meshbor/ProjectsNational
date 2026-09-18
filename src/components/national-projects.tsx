@@ -33,7 +33,9 @@ import {
   fixedRailWidth,
   railLayoutPreset,
   railMaxForWorkspace,
+  railViewCaption,
   twoThirdsRailWidth,
+  type RailView,
 } from "@/lib/projects/rail";
 import { projectTree } from "@/lib/projects/tree";
 import {
@@ -44,8 +46,6 @@ import {
   type FederalWorkspace,
   type WorkspaceTask,
 } from "@/lib/projects/workspace";
-
-type RailView = "list" | "tree";
 
 export function NationalProjectsApp() {
   const [selectedNpId, setSelectedNpId] = useState(ACTIVE_NATIONAL_PROJECT_ID);
@@ -148,6 +148,11 @@ export function NationalProjectsApp() {
 
   function applyWideLayout() {
     applyRailWidth(twoThirdsRailWidth(workspaceWidth));
+  }
+
+  function chooseRailView(next: RailView) {
+    setRailView(next);
+    if (next === "scheme" && railView !== "scheme") applyWideLayout();
   }
 
   function onResizerPointerDown(event: PointerEvent<HTMLButtonElement>) {
@@ -280,32 +285,49 @@ export function NationalProjectsApp() {
                     type="button"
                     className={railView === "list" ? "is-active" : undefined}
                     aria-pressed={railView === "list"}
-                    onClick={() => setRailView("list")}
+                    title="Список"
+                    onClick={() => chooseRailView("list")}
                   >
+                    <ListViewIcon />
                     Список
                   </button>
                   <button
                     type="button"
                     className={railView === "tree" ? "is-active" : undefined}
                     aria-pressed={railView === "tree"}
-                    onClick={() => setRailView("tree")}
+                    title="Дерево"
+                    onClick={() => chooseRailView("tree")}
                   >
+                    <TreeViewIcon />
                     Дерево
+                  </button>
+                  <button
+                    type="button"
+                    className={railView === "scheme" ? "is-active" : undefined}
+                    aria-pressed={railView === "scheme"}
+                    title="Схема"
+                    onClick={() => chooseRailView("scheme")}
+                  >
+                    <SchemeViewIcon />
+                    Схема
                   </button>
                 </div>
               )}
             </header>
             {railCollapsed ? (
-              <p className="projects-rail-strip">{railView === "tree" ? "дерево" : "список"}</p>
+              <p className="projects-rail-strip">{railViewCaption(railView)}</p>
             ) : (
-              <div id="projects-rail-list" className="projects-rail-list">
+              <div
+                id="projects-rail-list"
+                className={railView === "scheme" ? "projects-rail-list is-scheme" : "projects-rail-list"}
+              >
                 {railView === "list" ? (
                   <RailList
                     ranked={ranked}
                     selectedId={selectedProject?.id}
                     onOpen={openNational}
                   />
-                ) : (
+                ) : railView === "tree" ? (
                   <RailTree
                     tree={tree}
                     selectedNpId={selectedProject?.id}
@@ -314,6 +336,16 @@ export function NationalProjectsApp() {
                     expandedNps={expandedNps}
                     onToggleGroup={toggleGroup}
                     onToggleNational={toggleNational}
+                    onOpenNational={openNational}
+                    onOpenFederal={openFederal}
+                  />
+                ) : (
+                  <RailScheme
+                    tree={tree}
+                    selectedNpId={selectedProject?.id}
+                    selectedFpId={selectedFp?.id}
+                    expandedGroups={expandedGroups}
+                    onToggleGroup={toggleGroup}
                     onOpenNational={openNational}
                     onOpenFederal={openFederal}
                   />
@@ -381,6 +413,44 @@ function WideRailIcon() {
     <svg viewBox="0 0 16 16" aria-hidden="true">
       <rect x="1.5" y="2" width="9.5" height="12" rx="1" />
       <rect x="12" y="2" width="2.5" height="12" rx="1" opacity="0.35" />
+    </svg>
+  );
+}
+
+function ListViewIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="2" y="2" width="12" height="3" rx="0.8" />
+      <rect x="2" y="6.5" width="12" height="3" rx="0.8" />
+      <rect x="2" y="11" width="12" height="3" rx="0.8" />
+    </svg>
+  );
+}
+
+function TreeViewIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="3" y="1.5" width="11" height="3" rx="0.7" />
+      <rect x="6" y="6.5" width="8" height="3" rx="0.7" />
+      <rect x="6" y="11.5" width="8" height="3" rx="0.7" />
+      <path d="M4.2 3v10" fill="none" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function SchemeViewIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="5" y="1" width="6" height="3.6" rx="0.7" />
+      <path
+        d="M8 4.6v2M2.4 6.6h11.2M2.4 6.6V9M8 6.6V9M13.6 6.6V9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
+      <rect x="0.5" y="9" width="4.2" height="5" rx="0.7" />
+      <rect x="5.9" y="9" width="4.2" height="5" rx="0.7" />
+      <rect x="11.3" y="9" width="4.2" height="5" rx="0.7" />
     </svg>
   );
 }
@@ -544,6 +614,127 @@ function RailTree({
           );
         })}
       </ul>
+    </>
+  );
+}
+
+function RailScheme({
+  tree,
+  selectedNpId,
+  selectedFpId,
+  expandedGroups,
+  onToggleGroup,
+  onOpenNational,
+  onOpenFederal,
+}: {
+  tree: ReturnType<typeof projectTree>;
+  selectedNpId?: string;
+  selectedFpId?: string;
+  expandedGroups: Set<ProjectGroupId>;
+  onToggleGroup: (id: ProjectGroupId) => void;
+  onOpenNational: (project: NationalProject) => void;
+  onOpenFederal: (project: NationalProject, federal: FederalProject) => void;
+}) {
+  return (
+    <>
+      <p className="queue-lead">
+        Блок-схема как генеалогическое древо: группа → нацпроекты → федеральные. Нажми блок —
+        откроется канва.
+      </p>
+      <div className="scheme-forest">
+        {tree.map((branch) => {
+          const groupOpen = expandedGroups.has(branch.group.id);
+          return (
+            <section key={branch.group.id} className="scheme-family">
+              <div className={groupOpen ? "scheme-parent is-open" : "scheme-parent"}>
+                <button
+                  type="button"
+                  className="scheme-box scheme-group"
+                  aria-expanded={groupOpen}
+                  onClick={() => onToggleGroup(branch.group.id)}
+                >
+                  <strong>{branch.group.title}</strong>
+                  <span className="budget-pill">{formatBillionRub(branch.totalBillion)}</span>
+                </button>
+              </div>
+              {groupOpen ? (
+                <div
+                  className={
+                    branch.projects.length === 1 ? "scheme-children is-single" : "scheme-children"
+                  }
+                >
+                  {branch.projects.map((project) => {
+                    const npActive = project.id === selectedNpId;
+                    const budget = budgetFor(project.id);
+                    const showFederal = npActive && project.federalProjects.length > 0;
+                    return (
+                      <div key={project.id} className="scheme-node">
+                        <div className={showFederal ? "scheme-parent is-open" : "scheme-parent"}>
+                          <button
+                            type="button"
+                            className={
+                              npActive ? "scheme-box scheme-np is-active" : "scheme-box scheme-np"
+                            }
+                            onClick={() => onOpenNational(project)}
+                            aria-current={npActive ? "true" : undefined}
+                          >
+                            <strong>{project.title}</strong>
+                            <span className="scheme-meta">
+                              {project.id === ACTIVE_NATIONAL_PROJECT_ID ? (
+                                <span className="ready-badge">разбираем</span>
+                              ) : (
+                                <span className="todo-badge">в работе</span>
+                              )}
+                              {budget ? (
+                                <span className="budget-pill">
+                                  {formatBillionRub(budget.totalBillion)}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        </div>
+                        {showFederal ? (
+                          <div
+                            className={
+                              project.federalProjects.length === 1
+                                ? "scheme-children scheme-fps is-single"
+                                : "scheme-children scheme-fps"
+                            }
+                          >
+                            {project.federalProjects.map((federal) => {
+                              const fpActive = selectedFpId === federal.id;
+                              return (
+                                <div key={federal.id} className="scheme-node">
+                                  <button
+                                    type="button"
+                                    className={
+                                      fpActive
+                                        ? "scheme-box scheme-fp is-active"
+                                        : "scheme-box scheme-fp"
+                                    }
+                                    onClick={() => onOpenFederal(project, federal)}
+                                  >
+                                    <strong>{federal.title}</strong>
+                                    {federal.status === "ready" ? (
+                                      <span className="ready-badge">разбираем</span>
+                                    ) : (
+                                      <span className="todo-badge">в работе</span>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+          );
+        })}
+      </div>
     </>
   );
 }
