@@ -331,6 +331,7 @@ body {
 
 .rail-view {
   display: flex;
+  flex-wrap: wrap;
   width: 100%;
   padding: 2px;
   border-radius: 999px;
@@ -339,15 +340,32 @@ body {
 
 .rail-view button {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   border: 0;
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 6px 10px;
+  padding: 6px 6px;
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+.rail-view button svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: currentColor;
+}
+
+.rail-view button svg path {
+  fill: none;
 }
 
 .rail-view button.is-active {
@@ -512,6 +530,153 @@ body {
 .tree-row .todo-badge,
 .tree-row .ready-badge {
   flex: 0 0 auto;
+}
+
+.scheme-forest {
+  display: grid;
+  gap: 14px;
+}
+
+.projects-rail-list.is-scheme {
+  gap: 10px;
+}
+
+.scheme-family {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  overflow-x: auto;
+  padding: 12px 14px 16px;
+  background: #f7f4ea;
+  border-radius: 16px;
+  scrollbar-width: thin;
+}
+
+.scheme-parent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.scheme-parent.is-open::after {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 18px;
+  background: #b7ae9a;
+}
+
+.scheme-children {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.scheme-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 18px 6px 0;
+}
+
+.scheme-node::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 18px;
+  background: #b7ae9a;
+}
+
+.scheme-node::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 2px;
+  background: #b7ae9a;
+}
+
+.scheme-node:first-child::after {
+  left: 50%;
+  right: 0;
+}
+
+.scheme-node:last-child::after {
+  left: 0;
+  right: 50%;
+}
+
+.scheme-node:not(:first-child):not(:last-child)::after {
+  left: 0;
+  right: 0;
+}
+
+.scheme-children.is-single > .scheme-node::after {
+  display: none;
+}
+
+.scheme-box {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 118px;
+  max-width: 168px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.scheme-box strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.scheme-box:hover {
+  background: #fff;
+}
+
+.scheme-box.is-active {
+  outline: 2px solid var(--leaf);
+  background: #fff;
+}
+
+.scheme-group {
+  min-width: 180px;
+  max-width: 260px;
+  background: #fffdf8;
+}
+
+.scheme-fp {
+  min-width: 104px;
+  max-width: 148px;
+  padding: 6px 8px;
+}
+
+.scheme-fp strong {
+  font-size: 12px;
+}
+
+.scheme-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.scheme-box .budget-pill {
+  margin-left: 0;
 }
 
 .projects-rail.is-collapsed .projects-rail-head h2,

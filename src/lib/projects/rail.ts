@@ -24,7 +24,14 @@ export function twoThirdsRailWidth(workspaceWidth: number) {
   return railMaxForWorkspace(workspaceWidth);
 }
 
+export type RailView = "list" | "tree" | "scheme";
 export type RailLayoutPreset = "fixed" | "wide" | "custom";
+
+export function railViewCaption(view: RailView) {
+  if (view === "scheme") return "схема";
+  if (view === "tree") return "дерево";
+  return "список";
+}
 
 export function railLayoutPreset(width: number, workspaceWidth: number): RailLayoutPreset {
   if (workspaceWidth <= 0) return "fixed";
