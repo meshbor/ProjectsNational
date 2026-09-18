@@ -7,6 +7,7 @@ import {
   fixedRailWidth,
   railLayoutPreset,
   railMaxForWorkspace,
+  railViewCaption,
   twoThirdsRailWidth,
 } from "./rail";
 
@@ -36,4 +37,10 @@ test("пресеты ширины определяются по текущему
   assert.equal(railLayoutPreset(320, 1200), "fixed");
   assert.equal(railLayoutPreset(800, 1200), "wide");
   assert.equal(railLayoutPreset(450, 1200), "custom");
+});
+
+test("подписи трёх видов каталога", () => {
+  assert.equal(railViewCaption("list"), "список");
+  assert.equal(railViewCaption("tree"), "дерево");
+  assert.equal(railViewCaption("scheme"), "схема");
 });
