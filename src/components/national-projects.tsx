@@ -49,7 +49,7 @@ import {
 
 export function NationalProjectsApp() {
   const [selectedNpId, setSelectedNpId] = useState(ACTIVE_NATIONAL_PROJECT_ID);
-  const [selectedFpId, setSelectedFpId] = useState(ACTIVE_FEDERAL_PROJECT_ID);
+  const [selectedFpId, setSelectedFpId] = useState<string | null>(ACTIVE_FEDERAL_PROJECT_ID);
   const [railView, setRailView] = useState<RailView>("list");
   const [expandedGroups, setExpandedGroups] = useState<Set<ProjectGroupId>>(
     () => new Set(PROJECT_GROUPS.map((group) => group.id)),
@@ -63,17 +63,17 @@ export function NationalProjectsApp() {
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
   const isPhone = usePhoneLayout();
 
   const ranked = useMemo(() => projectsByBudgetDesc(NATIONAL_PROJECTS), []);
   const tree = useMemo(() => projectTree(), []);
   const selectedProject =
     nationalProjectById(selectedNpId) ?? ranked[0] ?? tree[0]?.projects[0];
-  const selectedFp = selectedProject
-    ? federalProjectById(selectedProject, selectedFpId) ??
-      selectedProject.federalProjects.find((item) => item.status === "ready") ??
-      selectedProject.federalProjects[0]
-    : undefined;
+  const selectedFp =
+    selectedProject && selectedFpId
+      ? federalProjectById(selectedProject, selectedFpId) ?? undefined
+      : undefined;
   const workspace = selectedProject
     ? workspaceFor(selectedProject.id, selectedFp?.id) ??
       workspaceForNationalProject(selectedProject)
@@ -99,12 +99,13 @@ export function NationalProjectsApp() {
     setRailWidth((value) => clampRailWidth(value, max));
   }, [workspaceWidth]);
 
+  useEffect(() => {
+    threadRef.current?.scrollTo({ top: 0 });
+  }, [workspace.id]);
+
   function openNational(project: NationalProject) {
-    const nextFp =
-      project.federalProjects.find((item) => item.status === "ready") ??
-      project.federalProjects[0];
     setSelectedNpId(project.id);
-    setSelectedFpId(nextFp.id);
+    setSelectedFpId(null);
     setExpandedGroups((current) => new Set(current).add(project.group));
     setExpandedNps((current) => new Set(current).add(project.id));
   }
@@ -205,7 +206,9 @@ export function NationalProjectsApp() {
           description={
             isFamilyCanvas
               ? "Сейчас разбираем ФП «Многодетная семья» в нацпроекте «Семья»."
-              : `Черновик НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
+              : selectedFp
+                ? `Черновик ФП «${selectedFp.title}» в НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
+                : `Черновик НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
           }
         />
 
@@ -336,8 +339,8 @@ export function NationalProjectsApp() {
           />
 
           <main className="chat-panel">
-            <div className="thread">
-              <ActiveWorkspace workspace={workspace} />
+            <div className="thread" ref={threadRef}>
+              <ActiveWorkspace key={workspace.id} workspace={workspace} />
             </div>
           </main>
 
@@ -686,10 +689,13 @@ function RailScheme({
 function ActiveWorkspace({ workspace }: { workspace: FederalWorkspace }) {
   const project = nationalProjectById(workspace.nationalProjectId);
   const budget = project ? budgetFor(project.id) : undefined;
-  const isFederal = workspace.id === LARGE_FAMILY_WORKSPACE.id;
+  const isDetailed = workspace.id === LARGE_FAMILY_WORKSPACE.id;
+  const isFederal = Boolean(workspace.federalProjectId);
   return (
     <section className="selected-card workspace-home">
-      <p className="bubble-kicker">{isFederal ? "Рабочее место" : "Черновик рабочего места"}</p>
+      <p className="bubble-kicker">
+        {isDetailed ? "Рабочее место" : isFederal ? "Черновик ФП" : "Черновик НП"}
+      </p>
       <p className="fp-crumb">
         {isFederal
           ? `НП «${project?.title}» → ФП «${workspace.title}»`

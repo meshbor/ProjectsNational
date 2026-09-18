@@ -45,7 +45,8 @@ test("large-family workspace does not invent contractor names", () => {
     ),
   );
   assert.ok(workspaceFor("family", "large-family"));
-  assert.equal(workspaceFor("family")?.title, "Многодетная семья");
+  assert.equal(workspaceFor("family")?.title, "Семья");
+  assert.equal(workspaceFor("family", "large-family")?.title, "Многодетная семья");
 });
 
 test("other national projects open a draft workspace without invented contractors", () => {
@@ -65,7 +66,9 @@ test("other national projects open a draft workspace without invented contractor
   assert.ok(workspaceFor("youth"));
   const youthByFederal = workspaceFor("youth", "Мы вместе");
   assert.ok(youthByFederal);
-  assert.equal(youthByFederal.title, "Молодёжь и дети");
+  assert.equal(youthByFederal.title, "Мы вместе");
+  assert.equal(youthByFederal.federalProjectId, "Мы вместе");
+  assert.notEqual(youthByFederal.title, workspaceForNationalProject(youth).title);
   assert.equal(workspaceFor("missing-project"), null);
 });
 
@@ -78,11 +81,14 @@ test("исполнители помечены ролями, подрядчико
   );
 });
 
-test("family keeps the detailed canvas; other NPs use a catalog draft", () => {
+test("family NP canvas is not the large-family FP; other NPs stay drafts", () => {
   const family = nationalProjectById("family");
   const youth = nationalProjectById("youth");
   assert.ok(family && youth);
-  assert.equal(workspaceForNationalProject(family), LARGE_FAMILY_WORKSPACE);
+  const familyNp = workspaceForNationalProject(family);
+  assert.equal(familyNp.title, "Семья");
+  assert.notEqual(familyNp, LARGE_FAMILY_WORKSPACE);
+  assert.equal(workspaceFor("family", "maternity")?.title, "Охрана материнства и детства");
   const draft = workspaceForNationalProject(youth);
   assert.equal(draft.summary, youth.goal);
   assert.deepEqual(draft.knownMeasures, youth.highlights);
