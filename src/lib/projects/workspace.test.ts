@@ -5,11 +5,16 @@ import {
   ACTIVE_NATIONAL_PROJECT_ID,
   DATA_NATIONAL_PROJECT_ID,
   DIGITAL_GOV_FEDERAL_PROJECT_ID,
+  DOMESTIC_SOLUTIONS_FEDERAL_PROJECT_ID,
   NATIONAL_PROJECTS,
   nationalProjectById,
   projectHasReadyWork,
 } from "./data";
-import { DATA_ECONOMY_WORKSPACE, DIGITAL_GOVERNMENT_WORKSPACE } from "./data-economy";
+import {
+  DATA_ECONOMY_WORKSPACE,
+  DIGITAL_GOVERNMENT_WORKSPACE,
+  DOMESTIC_SOLUTIONS_WORKSPACE,
+} from "./data-economy";
 import {
   LARGE_FAMILY_WORKSPACE,
   draftWorkspaceFor,
@@ -17,7 +22,7 @@ import {
   workspaceForNationalProject,
 } from "./workspace";
 
-test("ready federal projects are large family and digital government", () => {
+test("ready federal projects are large family, digital government and domestic solutions", () => {
   const ready = NATIONAL_PROJECTS.flatMap((project) =>
     project.federalProjects
       .filter((item) => item.status === "ready")
@@ -26,6 +31,7 @@ test("ready federal projects are large family and digital government", () => {
   assert.deepEqual(ready, [
     `${ACTIVE_NATIONAL_PROJECT_ID}:${ACTIVE_FEDERAL_PROJECT_ID}`,
     `${DATA_NATIONAL_PROJECT_ID}:${DIGITAL_GOV_FEDERAL_PROJECT_ID}`,
+    `${DATA_NATIONAL_PROJECT_ID}:${DOMESTIC_SOLUTIONS_FEDERAL_PROJECT_ID}`,
   ]);
   assert.equal(ACTIVE_FEDERAL_PROJECT_ID, "large-family");
 });
@@ -94,6 +100,16 @@ test("data economy canvas is researched and does not invent procurement contract
   assert.equal(workspaceFor("data")?.title, DATA_ECONOMY_WORKSPACE.title);
   assert.equal(workspaceFor("data", DIGITAL_GOV_FEDERAL_PROJECT_ID), DIGITAL_GOVERNMENT_WORKSPACE);
   assert.equal(
+    workspaceFor("data", DOMESTIC_SOLUTIONS_FEDERAL_PROJECT_ID),
+    DOMESTIC_SOLUTIONS_WORKSPACE,
+  );
+  assert.equal(DOMESTIC_SOLUTIONS_WORKSPACE.researched, true);
+  assert.equal(
+    DATA_ECONOMY_WORKSPACE.tasks.find((task) => task.title.includes("Отечественные решения"))
+      ?.status,
+    "ready",
+  );
+  assert.equal(
     workspaceFor("data", "Искусственный интеллект")?.title,
     "Искусственный интеллект",
   );
@@ -106,6 +122,24 @@ test("data economy canvas is researched and does not invent procurement contract
     DIGITAL_GOVERNMENT_WORKSPACE.companies.slots.find((slot) => slot.kind === "vendor")?.name,
     null,
   );
+  assert.equal(
+    DOMESTIC_SOLUTIONS_WORKSPACE.companies.slots.find(
+      (slot) => slot.role === "Подрядчики и исполнители закупок",
+    )?.name,
+    null,
+  );
+  const domesticNamed = DOMESTIC_SOLUTIONS_WORKSPACE.companies.slots
+    .filter((slot) => slot.name)
+    .map((slot) => slot.name);
+  assert.deepEqual(domesticNamed, [
+    "Минцифры",
+    "Д. Ю. Григоренко",
+    "М. И. Шадаев",
+    "ФРИИ",
+    "РФРИТ",
+    "Иртея",
+    "КНС Групп",
+  ]);
   assert.equal(
     DATA_ECONOMY_WORKSPACE.companies.slots.find((slot) => slot.name === "НИУ ВШЭ")?.kind,
     "vendor",

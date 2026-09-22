@@ -3,13 +3,18 @@ import {
   ACTIVE_NATIONAL_PROJECT_ID,
   DATA_NATIONAL_PROJECT_ID,
   DIGITAL_GOV_FEDERAL_PROJECT_ID,
+  DOMESTIC_SOLUTIONS_FEDERAL_PROJECT_ID,
   federalProjectById,
   nationalProjectById,
   type FederalProject,
   type NationalProject,
   type WorkStatus,
 } from "./data";
-import { DATA_ECONOMY_WORKSPACE, DIGITAL_GOVERNMENT_WORKSPACE } from "./data-economy";
+import {
+  DATA_ECONOMY_WORKSPACE,
+  DIGITAL_GOVERNMENT_WORKSPACE,
+  DOMESTIC_SOLUTIONS_WORKSPACE,
+} from "./data-economy";
 
 export type CompanyKind = "agency" | "curator" | "lead" | "region" | "vendor";
 
@@ -217,6 +222,12 @@ export function workspaceFor(nationalProjectId: string, federalProjectId?: strin
     federalProjectId === DIGITAL_GOV_FEDERAL_PROJECT_ID
   ) {
     return DIGITAL_GOVERNMENT_WORKSPACE;
+  }
+  if (
+    nationalProjectId === DATA_NATIONAL_PROJECT_ID &&
+    federalProjectId === DOMESTIC_SOLUTIONS_FEDERAL_PROJECT_ID
+  ) {
+    return DOMESTIC_SOLUTIONS_WORKSPACE;
   }
   const federal = federalProjectById(project, federalProjectId);
   return federal ? draftWorkspaceForFederal(project, federal) : workspaceForNationalProject(project);

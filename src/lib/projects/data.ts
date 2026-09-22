@@ -64,6 +64,7 @@ export const ACTIVE_NATIONAL_PROJECT_ID = "family";
 export const ACTIVE_FEDERAL_PROJECT_ID = "large-family";
 export const DATA_NATIONAL_PROJECT_ID = "data";
 export const DIGITAL_GOV_FEDERAL_PROJECT_ID = "Цифровое государственное управление";
+export const DOMESTIC_SOLUTIONS_FEDERAL_PROJECT_ID = "Отечественные решения";
 
 export function todoFederalProjects(titles: string[]): FederalProject[] {
   return titles.map((title) => ({ id: title, title, status: "todo" }));
@@ -427,7 +428,10 @@ export const NATIONAL_PROJECTS: NationalProject[] = [
       "Государственная статистика",
       "Искусственный интеллект",
     ]).map((item) =>
-      item.id === DIGITAL_GOV_FEDERAL_PROJECT_ID ? { ...item, status: "ready" as const } : item,
+      item.id === DIGITAL_GOV_FEDERAL_PROJECT_ID ||
+      item.id === DOMESTIC_SOLUTIONS_FEDERAL_PROJECT_ID
+        ? { ...item, status: "ready" as const }
+        : item,
     ),
     highlights: [
       "97% домохозяйств с качественным широкополосным доступом",
