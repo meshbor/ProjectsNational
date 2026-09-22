@@ -62,6 +62,8 @@ export type NationalProject = {
 
 export const ACTIVE_NATIONAL_PROJECT_ID = "family";
 export const ACTIVE_FEDERAL_PROJECT_ID = "large-family";
+export const DATA_NATIONAL_PROJECT_ID = "data";
+export const DIGITAL_GOV_FEDERAL_PROJECT_ID = "Цифровое государственное управление";
 
 export function todoFederalProjects(titles: string[]): FederalProject[] {
   return titles.map((title) => ({ id: title, title, status: "todo" }));
@@ -424,7 +426,9 @@ export const NATIONAL_PROJECTS: NationalProject[] = [
       "Кадры для цифровой трансформации",
       "Государственная статистика",
       "Искусственный интеллект",
-    ]),
+    ]).map((item) =>
+      item.id === DIGITAL_GOV_FEDERAL_PROJECT_ID ? { ...item, status: "ready" as const } : item,
+    ),
     highlights: [
       "97% домохозяйств с качественным широкополосным доступом",
       "100 массовых госуслуг проактивно или в момент обращения",
