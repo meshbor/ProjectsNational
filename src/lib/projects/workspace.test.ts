@@ -3,10 +3,13 @@ import { test } from "node:test";
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
+  DATA_NATIONAL_PROJECT_ID,
+  DIGITAL_GOV_FEDERAL_PROJECT_ID,
   NATIONAL_PROJECTS,
   nationalProjectById,
   projectHasReadyWork,
 } from "./data";
+import { DATA_ECONOMY_WORKSPACE, DIGITAL_GOVERNMENT_WORKSPACE } from "./data-economy";
 import {
   LARGE_FAMILY_WORKSPACE,
   draftWorkspaceFor,
@@ -14,19 +17,22 @@ import {
   workspaceForNationalProject,
 } from "./workspace";
 
-test("only one federal project is in the workspace", () => {
+test("ready federal projects are large family and digital government", () => {
   const ready = NATIONAL_PROJECTS.flatMap((project) =>
     project.federalProjects
       .filter((item) => item.status === "ready")
       .map((item) => `${project.id}:${item.id}`),
   );
-  assert.deepEqual(ready, [`${ACTIVE_NATIONAL_PROJECT_ID}:${ACTIVE_FEDERAL_PROJECT_ID}`]);
+  assert.deepEqual(ready, [
+    `${ACTIVE_NATIONAL_PROJECT_ID}:${ACTIVE_FEDERAL_PROJECT_ID}`,
+    `${DATA_NATIONAL_PROJECT_ID}:${DIGITAL_GOV_FEDERAL_PROJECT_ID}`,
+  ]);
   assert.equal(ACTIVE_FEDERAL_PROJECT_ID, "large-family");
 });
 
 test("other national projects stay marked as in progress", () => {
   for (const project of NATIONAL_PROJECTS) {
-    if (project.id === ACTIVE_NATIONAL_PROJECT_ID) {
+    if (project.id === ACTIVE_NATIONAL_PROJECT_ID || project.id === DATA_NATIONAL_PROJECT_ID) {
       assert.equal(projectHasReadyWork(project), true);
       continue;
     }
@@ -78,6 +84,31 @@ test("исполнители помечены ролями, подрядчико
   assert.equal(
     LARGE_FAMILY_WORKSPACE.companies.slots.find((slot) => slot.kind === "vendor")?.name,
     null,
+  );
+});
+
+test("data economy canvas is researched and does not invent procurement contractors", () => {
+  const data = nationalProjectById("data");
+  assert.ok(data);
+  assert.equal(workspaceForNationalProject(data), DATA_ECONOMY_WORKSPACE);
+  assert.equal(workspaceFor("data")?.title, DATA_ECONOMY_WORKSPACE.title);
+  assert.equal(workspaceFor("data", DIGITAL_GOV_FEDERAL_PROJECT_ID), DIGITAL_GOVERNMENT_WORKSPACE);
+  assert.equal(
+    workspaceFor("data", "Искусственный интеллект")?.title,
+    "Искусственный интеллект",
+  );
+  assert.equal(workspaceFor("data", "Искусственный интеллект")?.researched, undefined);
+  const procurement = DATA_ECONOMY_WORKSPACE.companies.slots.find(
+    (slot) => slot.role === "Подрядчики и исполнители закупок",
+  );
+  assert.equal(procurement?.name, null);
+  assert.equal(
+    DIGITAL_GOVERNMENT_WORKSPACE.companies.slots.find((slot) => slot.kind === "vendor")?.name,
+    null,
+  );
+  assert.equal(
+    DATA_ECONOMY_WORKSPACE.companies.slots.find((slot) => slot.name === "НИУ ВШЭ")?.kind,
+    "vendor",
   );
 });
 

@@ -1,12 +1,15 @@
 import {
   ACTIVE_FEDERAL_PROJECT_ID,
   ACTIVE_NATIONAL_PROJECT_ID,
+  DATA_NATIONAL_PROJECT_ID,
+  DIGITAL_GOV_FEDERAL_PROJECT_ID,
   federalProjectById,
   nationalProjectById,
   type FederalProject,
   type NationalProject,
   type WorkStatus,
 } from "./data";
+import { DATA_ECONOMY_WORKSPACE, DIGITAL_GOVERNMENT_WORKSPACE } from "./data-economy";
 
 export type CompanyKind = "agency" | "curator" | "lead" | "region" | "vendor";
 
@@ -27,6 +30,8 @@ export type FederalWorkspace = {
   id: string;
   nationalProjectId: string;
   federalProjectId?: string;
+  /** Разобрано по открытым источникам, не черновик каталога. */
+  researched?: boolean;
   title: string;
   summary: string;
   knownMeasures: string[];
@@ -37,14 +42,15 @@ export type FederalWorkspace = {
   tasks: WorkspaceTask[];
 };
 
-/** Единственное разобранное рабочее место. Подрядчиков не выдумываем. */
+/** Разобранный ФП «Многодетная семья». Подрядчиков не выдумываем. */
 export const LARGE_FAMILY_WORKSPACE: FederalWorkspace = {
   id: ACTIVE_FEDERAL_PROJECT_ID,
   nationalProjectId: ACTIVE_NATIONAL_PROJECT_ID,
   federalProjectId: ACTIVE_FEDERAL_PROJECT_ID,
+  researched: true,
   title: "Многодетная семья",
   summary:
-    "Федеральный проект внутри нацпроекта «Семья»: поддержка семей с тремя и более детьми. Здесь одно рабочее место — меры, исполнители и задачи. Остальные федеральные и национальные проекты пока в очереди.",
+    "Федеральный проект внутри нацпроекта «Семья»: поддержка семей с тремя и более детьми. Здесь разобранное рабочее место — меры, исполнители и задачи.",
   knownMeasures: [
     "450 тыс. ₽ на погашение ипотеки многодетным; на Дальнем Востоке — до 1 млн ₽",
     "Приоритет многодетных в региональных программах рождаемости и соцконтракте",
@@ -192,19 +198,26 @@ export function draftWorkspaceForFederal(
 }
 
 export function workspaceForNationalProject(project: NationalProject) {
+  if (project.id === DATA_NATIONAL_PROJECT_ID) return DATA_ECONOMY_WORKSPACE;
   return draftWorkspaceFor(project);
 }
 
 export function workspaceFor(nationalProjectId: string, federalProjectId?: string) {
   const project = nationalProjectById(nationalProjectId);
   if (!project) return null;
-  if (!federalProjectId) return draftWorkspaceFor(project);
+  if (!federalProjectId) return workspaceForNationalProject(project);
   if (
     nationalProjectId === LARGE_FAMILY_WORKSPACE.nationalProjectId &&
     federalProjectId === LARGE_FAMILY_WORKSPACE.id
   ) {
     return LARGE_FAMILY_WORKSPACE;
   }
+  if (
+    nationalProjectId === DATA_NATIONAL_PROJECT_ID &&
+    federalProjectId === DIGITAL_GOV_FEDERAL_PROJECT_ID
+  ) {
+    return DIGITAL_GOVERNMENT_WORKSPACE;
+  }
   const federal = federalProjectById(project, federalProjectId);
-  return federal ? draftWorkspaceForFederal(project, federal) : draftWorkspaceFor(project);
+  return federal ? draftWorkspaceForFederal(project, federal) : workspaceForNationalProject(project);
 }

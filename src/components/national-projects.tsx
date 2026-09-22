@@ -81,6 +81,7 @@ export function NationalProjectsApp() {
   const railMax = railMaxForWorkspace(workspaceWidth);
   const columnWidth = railCollapsed ? RAIL_COLLAPSED : railWidth;
   const isFamilyCanvas = workspace.id === LARGE_FAMILY_WORKSPACE.id;
+  const isResearched = Boolean(workspace.researched);
   const isRailWide = !railCollapsed && railWidth >= workspaceWidth * 0.5 && workspaceWidth > 0;
 
   useEffect(() => {
@@ -206,9 +207,13 @@ export function NationalProjectsApp() {
           description={
             isFamilyCanvas
               ? "Сейчас разбираем ФП «Многодетная семья» в нацпроекте «Семья»."
-              : selectedFp
-                ? `Черновик ФП «${selectedFp.title}» в НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
-                : `Черновик НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
+              : isResearched && selectedFp
+                ? `Разбор ФП «${selectedFp.title}». Подрядчиков из ЕИС не подставляем.`
+                : isResearched
+                  ? `Разбор НП «${selectedProject?.title}». Подрядчиков из ЕИС не подставляем.`
+                  : selectedFp
+                    ? `Черновик ФП «${selectedFp.title}» в НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
+                    : `Черновик НП «${selectedProject?.title}». Подрядчиков не выдумываем.`
           }
         />
 
@@ -689,7 +694,7 @@ function RailScheme({
 function ActiveWorkspace({ workspace }: { workspace: FederalWorkspace }) {
   const project = nationalProjectById(workspace.nationalProjectId);
   const budget = project ? budgetFor(project.id) : undefined;
-  const isDetailed = workspace.id === LARGE_FAMILY_WORKSPACE.id;
+  const isDetailed = Boolean(workspace.researched);
   const isFederal = Boolean(workspace.federalProjectId);
   return (
     <section className="selected-card workspace-home">
